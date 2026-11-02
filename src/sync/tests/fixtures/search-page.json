@@ -1,0 +1,26 @@
+{
+  "total_count": 2,
+  "incomplete_results": false,
+  "items": [
+    {
+      "id": 10270250,
+      "name": "react",
+      "full_name": "facebook/react",
+      "html_url": "https://github.com/facebook/react",
+      "description": "The library for web and native user interfaces.",
+      "stargazers_count": 230000,
+      "forks_count": 47000,
+      "open_issues_count": 900
+    },
+    {
+      "id": 20929025,
+      "name": "TypeScript",
+      "full_name": "microsoft/TypeScript",
+      "html_url": "https://github.com/microsoft/TypeScript",
+      "description": null,
+      "stargazers_count": 100000,
+      "forks_count": 12000,
+      "open_issues_count": 5000
+    }
+  ]
+}
