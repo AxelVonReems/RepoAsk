@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { config } from '../config.js';
 import { initDB } from '../store/db.js';
-import { upsertRepositories } from '../store/repository.js';
+import { deleteRepositoriesSyncedBefore, upsertRepositories } from '../store/repository.js';
 import { getReadmeEtag, toReadmeRecord, touchReadme, upsertReadme } from '../store/readmes.js';
 import { fetchReadme, fetchWithRetry, parseNextPageUrl, sleep } from './client.js';
 import { parsePage } from './page.js';
@@ -46,6 +46,7 @@ export async function sync(): Promise<SyncSummary> {
     inserted: 0,
     updated: 0,
     skipped: 0,
+    removed: 0,
     apiCalls: 0,
     errors: 0,
     capped: false,
@@ -54,6 +55,7 @@ export async function sync(): Promise<SyncSummary> {
   };
 
   const syncedRepos: Pick<RepositoryRecord, 'id' | 'fullName'>[] = [];
+  const runStartedAt = new Date().toISOString();
 
   try {
     initDB();
@@ -125,6 +127,14 @@ export async function sync(): Promise<SyncSummary> {
         : (headers['link'] as string | undefined);
 
       currentUrl = parseNextPageUrl(linkHeader);
+    }
+
+    // Remove repos that are no longer in the source (e.g. fell out of the top 1,000).
+    // Only after a clean run: a partial or empty run must never wipe good data.
+    if (summary.errors === 0 && syncedRepos.length > 0) {
+      summary.removed = deleteRepositoriesSyncedBefore(runStartedAt);
+    } else {
+      console.warn('Skipping stale repository cleanup: repository sync was incomplete.');
     }
 
     await syncReadmes(syncedRepos, summary);
