@@ -30,6 +30,7 @@ export interface SyncSummary {
   inserted: number;
   updated: number;
   skipped: number;
+  removed: number; // stale repos deleted after a clean run
   errors: number;
   apiCalls: number;
   durationMs: number;

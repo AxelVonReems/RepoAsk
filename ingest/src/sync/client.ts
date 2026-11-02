@@ -18,7 +18,8 @@ if (!token) {
 // Axios client configuration
 const githubClient = axios.create({
   baseURL: 'https://api.github.com',
-  timeout: 5 * 1000,
+  // The Search API can take several seconds per page; 5s caused needless timeouts
+  timeout: 15 * 1000,
   headers: {
     'Authorization': `Bearer ${token}`,
     'Accept': 'application/vnd.github+json',
@@ -107,8 +108,15 @@ export async function fetchWithRetry<T>(
             }
           }
 
+          // No status means the request never got a response (timeout, connection reset)
+          const reason = isRateLimited
+            ? `Rate limited (${status})`
+            : status
+              ? `Server error (${status})`
+              : `Network error (${axiosError.code ?? 'unknown'})`;
+
           console.warn(
-            `[Attempt ${attempt}/${maxRetries}] Rate limited or failed (${status}). ` +
+            `[Attempt ${attempt}/${maxRetries}] ${reason}. ` +
             `Waiting ${Math.round(waitTime / 1000)}s before retry...`
           );
 

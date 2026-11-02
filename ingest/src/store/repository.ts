@@ -44,3 +44,8 @@ export function upsertRepositories(repos: RepositoryRecord[]): { inserted: numbe
 
   return transaction(repos);
 }
+// Deletes repositories not seen since the cutoff (e.g. dropped out of the top-N search).
+// Their READMEs are removed by ON DELETE CASCADE. Returns the number of deleted rows.
+export function deleteRepositoriesSyncedBefore(cutoff: string): number {
+  return db.prepare('DELETE FROM repositories WHERE syncedAt < ?').run(cutoff).changes;
+}
