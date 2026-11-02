@@ -6,14 +6,25 @@ readme = "README.md"
 authors = [
     { name = "axelvonreems", email = "axelvonreems@gmail.com" }
 ]
-requires-python = ">=3.12"
+# Only 3.12 is used (.python-version, python:3.12-slim image); newer onnxruntime
+# releases for 3.13+ have no Intel macOS builds, so the lock can't cover them
+requires-python = ">=3.12,<3.13"
 dependencies = [
+    "fastembed>=0.9.1",
     "python-dotenv>=1.2.4",
 ]
 
 [build-system]
 requires = ["uv_build>=0.13.6,<0.14.0"]
 build-backend = "uv_build"
+
+# uv.lock is universal; only accept versions that have builds for every place we run:
+# Intel macOS (local dev) and x86_64 Linux (CI and the Docker image)
+[tool.uv]
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
 
 # Package lives in rag/ at the repo root, not src/rag/ (ingest/ already has its own src/)
 [tool.uv.build-backend]

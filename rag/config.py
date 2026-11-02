@@ -23,3 +23,12 @@ INDEX_DB_PATH = _path("INDEX_DB_PATH", "data/index.db")
 
 # READMEs are truncated to this many bytes before chunking (median is ~12 KB)
 README_MAX_BYTES = int(os.environ.get("README_MAX_BYTES", 30_000))
+
+# Embedding model (fastembed). bge-small reads at most 512 tokens per input.
+EMBED_MODEL = os.environ.get("EMBED_MODEL", "BAAI/bge-small-en-v1.5")
+MODEL_CACHE_DIR = _path("MODEL_CACHE_DIR", ".cache/fastembed")
+
+# Chunk sizes in model tokens: body + prefix must stay under the model's 512-token limit
+CHUNK_MAX_TOKENS = int(os.environ.get("CHUNK_MAX_TOKENS", 350))
+CHUNK_OVERLAP_TOKENS = int(os.environ.get("CHUNK_OVERLAP_TOKENS", 50))
+CHUNK_PREFIX_MAX_TOKENS = int(os.environ.get("CHUNK_PREFIX_MAX_TOKENS", 150))
