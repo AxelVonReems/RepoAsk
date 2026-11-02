@@ -26,7 +26,7 @@ const githubClient = axios.create({
 });
 
 // Utility to pause execution for a given number of milliseconds.
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+export const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Wraps a GET request with exponential backoff and jitter.
 // Handles HTTP 429 Rate Limits and 5xx Server Errors gracefully.

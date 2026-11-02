@@ -12,7 +12,15 @@ export const GitHubRepoSchema = z.object({
   open_issues_count: z.number(),
 });
 
+// /orgs/{org}/repos returns a plain array
 export const GitHubPageSchema = z.array(GitHubRepoSchema);
+
+// /search/repositories wraps the array in an envelope
+export const GitHubSearchPageSchema = z.object({
+  total_count: z.number(),
+  incomplete_results: z.boolean(),
+  items: z.array(GitHubRepoSchema),
+});
 
 export type GitHubRepoPayload = z.infer<typeof GitHubRepoSchema>;
 

@@ -2,8 +2,9 @@ import { fileURLToPath } from 'node:url';
 import { config } from '../config.js';
 import { initDB } from '../store/db.js';
 import { upsertRepositories } from '../store/repository.js';
-import { fetchWithRetry, parseNextPageUrl } from './client.js';
-import { GitHubPageSchema } from './types.js';
+import { fetchWithRetry, parseNextPageUrl, sleep } from './client.js';
+import { parsePage } from './page.js';
+import { resolveSource } from './source.js';
 import type { GitHubRepoPayload, SyncSummary } from './types.js';
 import type { RepositoryRecord } from '../store/types.js';
 
@@ -24,13 +25,21 @@ export async function sync(): Promise<SyncSummary> {
   try {
     initDB();
 
-    let currentUrl: string | null = config.github.syncUrl;
+    const source = resolveSource(config.github.source, config.github.maxPages);
+    console.log(`Syncing ${config.github.source} (up to ${source.maxPages} pages)`);
+
+    let currentUrl: string | null = source.url;
     let pagesProcessed = 0;
 
     while (currentUrl) {
-      if (pagesProcessed >= config.github.maxPages) {
+      if (pagesProcessed >= source.maxPages) {
         summary.capped = true;
         break;
+      }
+
+      // Search API has a separate per-minute limit, so space out page requests
+      if (source.kind === 'search' && pagesProcessed > 0) {
+        await sleep(config.github.searchPageDelayMs);
       }
 
       // Fetch as unknown to force Zod to validate the raw boundary
@@ -38,15 +47,14 @@ export async function sync(): Promise<SyncSummary> {
       summary.apiCalls++;
       pagesProcessed++;
 
-      const parseResult = GitHubPageSchema.safeParse(rawData);
+      const payloads: GitHubRepoPayload[] | null = parsePage(source.kind, rawData);
 
-      if (!parseResult.success) {
+      if (!payloads) {
         console.warn('Zod validation failed for page payload');
         summary.errors++;
         break;
       }
 
-      const payloads: GitHubRepoPayload[] = parseResult.data;
       summary.fetched += payloads.length;
 
       const validRecords: RepositoryRecord[] = [];
