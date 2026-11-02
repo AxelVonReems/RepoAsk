@@ -10,7 +10,13 @@
       "description": "The library for web and native user interfaces.",
       "stargazers_count": 230000,
       "forks_count": 47000,
-      "open_issues_count": 900
+      "open_issues_count": 900,
+      "topics": [
+        "javascript",
+        "react",
+        "ui",
+        "frontend"
+      ]
     },
     {
       "id": 20929025,

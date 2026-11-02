@@ -8,6 +8,7 @@ export interface RepositoryRecord {
   metric: number; // stargazers_count
   forks: number;
   openIssues: number;
+  topics: string[]; // stored as a JSON array in a TEXT column
   syncedAt: string;
 }
 
