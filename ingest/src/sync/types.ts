@@ -30,8 +30,17 @@ export interface SyncSummary {
   inserted: number;
   updated: number;
   skipped: number;
+  removed: number; // stale repos deleted after a clean run
   errors: number;
   apiCalls: number;
   durationMs: number;
   capped: boolean;
+  readmes: {
+    inserted: number;
+    updated: number;
+    unchanged: number;   // 200 with identical content
+    notModified: number; // 304 via ETag
+    missing: number;     // 404: repository has no README
+    errors: number;
+  };
 }
