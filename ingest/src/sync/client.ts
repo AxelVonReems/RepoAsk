@@ -2,6 +2,8 @@ import axios, { AxiosError } from 'axios';
 import type { AxiosResponseHeaders, RawAxiosResponseHeaders } from 'axios';
 import * as dotenv from 'dotenv';
 import { config } from '../config.js';
+import { interpretReadmeResponse, README_ACCEPT, README_ACCEPT_STATUS } from './readme.js';
+import type { ReadmeResult } from './readme.js';
 
 // Load environment variables
 dotenv.config();
@@ -28,22 +30,37 @@ const githubClient = axios.create({
 // Utility to pause execution for a given number of milliseconds.
 export const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+export interface FetchOptions {
+  params?: Record<string, string | number | boolean>;
+  headers?: Record<string, string>;
+  // Non-2xx statuses that are expected answers (e.g. 304, 404) and must not throw
+  acceptStatus?: number[];
+  responseType?: 'json' | 'text';
+}
+
 // Wraps a GET request with exponential backoff and jitter.
 // Handles HTTP 429 Rate Limits and 5xx Server Errors gracefully.
 export async function fetchWithRetry<T>(
   url: string,
-  params?: Record<string, string | number | boolean>,
+  options: FetchOptions = {},
   maxRetries: number = 3
-): Promise<{ data: T; headers: AxiosResponseHeaders | RawAxiosResponseHeaders }> {
+): Promise<{ data: T; headers: AxiosResponseHeaders | RawAxiosResponseHeaders; status: number }> {
   let attempt = 0;
   const initialDelay = 0.5 * 1000;
+  const acceptStatus = options.acceptStatus ?? [];
 
   while (true) {
     try {
-      const response = await githubClient.get<T>(url, { params });
-      return { 
-        data: response.data, 
-        headers: response.headers 
+      const response = await githubClient.get<T>(url, {
+        ...(options.params && { params: options.params }),
+        ...(options.headers && { headers: options.headers }),
+        ...(options.responseType && { responseType: options.responseType }),
+        validateStatus: (status) => (status >= 200 && status < 300) || acceptStatus.includes(status),
+      });
+      return {
+        data: response.data,
+        headers: response.headers,
+        status: response.status
       };
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
@@ -108,6 +125,20 @@ export async function fetchWithRetry<T>(
       );
     }
   }
+}
+
+// Fetches a repository README. Sends the stored ETag so unchanged READMEs come back as 304.
+export async function fetchReadme(fullName: string, etag: string | null): Promise<ReadmeResult> {
+  const { data, headers, status } = await fetchWithRetry<unknown>(`/repos/${fullName}/readme`, {
+    headers: {
+      Accept: README_ACCEPT,
+      ...(etag && { 'If-None-Match': etag }),
+    },
+    acceptStatus: README_ACCEPT_STATUS,
+    responseType: 'text',
+  });
+
+  return interpretReadmeResponse(status, data, headers);
 }
 
 // Parses the GitHub REST API 'Link' header to extract the pagination URL for the next page.
