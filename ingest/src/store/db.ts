@@ -30,4 +30,16 @@ export function initDB(): void {
       syncedAt TEXT NOT NULL
     )
   `);
+
+  // One README per repository. contentSha lets the indexer skip unchanged READMEs.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS readmes (
+      repoId TEXT PRIMARY KEY REFERENCES repositories(id) ON DELETE CASCADE,
+      etag TEXT,
+      content TEXT NOT NULL,
+      contentSha TEXT NOT NULL,
+      sizeBytes INTEGER NOT NULL,
+      fetchedAt TEXT NOT NULL
+    )
+  `);
 }
