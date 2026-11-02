@@ -51,12 +51,12 @@ def clean_readme(text: str, max_bytes: int = config.README_MAX_BYTES) -> str:
     """Cleans README Markdown and truncates the result to at most max_bytes (UTF-8)."""
     text = COMMENT.sub("", text)
     parts = []
-    for is_code, block in _split_code_fences(text):
+    for is_code, block in split_code_fences(text):
         parts.append(block if is_code else _clean_prose(block))
     return _truncate("".join(parts).strip(), max_bytes)
 
 
-def _split_code_fences(text: str) -> list[tuple[bool, str]]:
+def split_code_fences(text: str) -> list[tuple[bool, str]]:
     """Splits text into (is_code, block) segments on ``` / ~~~ fences, keeping the fences.
 
     Follows CommonMark: a fence closes only with the same character, at least as many
