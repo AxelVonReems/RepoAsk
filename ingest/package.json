@@ -8,7 +8,7 @@
     "start": "tsx src/index.ts",
     "sync": "tsx src/sync/index.ts",
     "tool": "tsx src/tool/index.ts",
-    "test": "DB_PATH=./data/test.db tsx --test src/**/*.test.ts",
+    "test": "DB_PATH=./data/test.db tsx --test --test-concurrency=1 src/**/*.test.ts",
     "test:win": "cmd /C \"set DB_PATH=:memory:&& tsx --test src/**/tests/*.test.ts\"",
     "stats": "tsx src/stats.ts",
     "typecheck": "tsc --noEmit"

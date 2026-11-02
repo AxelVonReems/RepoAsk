@@ -10,3 +10,15 @@ export interface RepositoryRecord {
   openIssues: number;
   syncedAt: string;
 }
+
+// README content for one repository
+export interface ReadmeRecord {
+  repoId: string;
+  etag: string | null;
+  content: string;
+  contentSha: string; // sha256 hex of content
+  sizeBytes: number;
+  fetchedAt: string;
+}
+
+export type ReadmeUpsertResult = 'inserted' | 'updated' | 'unchanged';
