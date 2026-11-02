@@ -1,0 +1,64 @@
+# ---------------------------------------------------------------
+# Secrets — never commit. .env.example (placeholders only) is kept.
+# ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---------------------------------------------------------------
+# Data — worker.db / index.db are build outputs, rebuilt by CI.
+# index.db ships as a GitHub Release asset, not in git.
+# ---------------------------------------------------------------
+data/*
+!data/.gitkeep
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ---------------------------------------------------------------
+# Node / TypeScript (ingest)
+# ---------------------------------------------------------------
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+coverage/
+
+# ---------------------------------------------------------------
+# Python (rag)
+# ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Downloaded embedding models (sentence-transformers / HF cache)
+models/
+.cache/
+
+# ---------------------------------------------------------------
+# Azure / tooling
+# ---------------------------------------------------------------
+.azure/
+
+# ---------------------------------------------------------------
+# OS / editors
+# ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
