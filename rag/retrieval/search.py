@@ -26,7 +26,8 @@ class Hit:
     stars: int
     description: str | None
     heading: str
-    text: str  # what was embedded: repo prefix + chunk body
+    body: str  # the README text of this chunk
+    text: str  # what was embedded: repo prefix + body
     score: float  # cosine similarity, higher is more relevant
 
 
@@ -35,7 +36,8 @@ class Index:
 
     def __init__(self, vectors: np.ndarray, chunks: list[tuple], meta: dict[str, str]) -> None:
         self.vectors = vectors
-        self._chunks = chunks  # (repo_id, full_name, url, stars, description, heading, text)
+        # (repo_id, full_name, url, stars, description, heading, body, text)
+        self._chunks = chunks
         settings = json.loads(meta.get("settings", "{}"))
         self.model: str | None = settings.get("model")
         self.built_at: str | None = meta.get("built_at")
@@ -60,7 +62,8 @@ class Index:
         meta = dict(db.execute("SELECT key, value FROM meta"))
         rows = db.execute(
             """
-            SELECT r.id, r.full_name, r.url, r.stars, r.description, c.heading, c.text, c.vector
+            SELECT r.id, r.full_name, r.url, r.stars, r.description,
+                   c.heading, c.body, c.text, c.vector
             FROM chunks c JOIN repos r ON r.id = c.repo_id
             ORDER BY c.id
             """
@@ -91,11 +94,11 @@ class Index:
             score = float(scores[row])
             if score < min_score or len(hits) == k:
                 break
-            repo_id, full_name, url, stars, description, heading, text = self._chunks[row]
+            repo_id, *details = self._chunks[row]
             if per_repo.get(repo_id, 0) >= max_per_repo:
                 continue
             per_repo[repo_id] = per_repo.get(repo_id, 0) + 1
-            hits.append(Hit(full_name, url, stars, description, heading, text, score))
+            hits.append(Hit(*details, score=score))
         return hits
 
 
@@ -129,9 +132,8 @@ def main() -> None:
         args.question, k=args.k, max_per_repo=args.max_per_repo, min_score=args.min_score
     )
     for rank, hit in enumerate(hits, 1):
-        body = hit.text.split("\n\n", 1)[-1].replace("\n", " ")
         print(f"{rank}. {hit.score:.3f}  {hit.full_name} ({hit.stars:,}★)  § {hit.heading or '-'}")
-        print(f"   {body[:160]}")
+        print(f"   {' '.join(hit.body.split())[:160]}")
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ from rag import config
 class AskRequest(BaseModel):
     # Bounded: every question costs an embedding and a Gemini request
     question: str = Field(min_length=3, max_length=config.QUESTION_MAX_CHARS)
+    top_k: int = Field(default=config.SEARCH_TOP_K, ge=1, le=10, description="Sources to use")
 
 
 class Source(BaseModel):
@@ -16,6 +17,7 @@ class Source(BaseModel):
     url: str
     stars: int
     heading: str
+    snippet: str = Field(description="Start of the README section the source comes from")
     score: float = Field(description="Cosine similarity to the question")
 
 

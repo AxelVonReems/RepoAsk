@@ -111,6 +111,7 @@ def test_hit_carries_repo_details(index_db: Path):
     assert (hit.full_name, hit.stars, hit.description) == ("owner/a", 300, "Repo a")
     assert hit.url == "https://github.com/owner/a"
     assert hit.heading == "H0"
+    assert hit.body == "body"
 
 
 def test_query_with_wrong_dimension_is_rejected(index_db: Path):

@@ -28,8 +28,8 @@ class Answerer:
         self.retriever = retriever
         self.llm = llm
 
-    def ask(self, question: str) -> Answer:
-        hits = self.retriever.retrieve(question)
+    def ask(self, question: str, k: int = config.SEARCH_TOP_K) -> Answer:
+        hits = self.retriever.retrieve(question, k=k)
         # Nothing passed the score threshold: answering would only invite a made-up reply,
         # and skipping the call saves quota
         if not hits:

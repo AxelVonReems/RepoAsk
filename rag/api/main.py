@@ -44,7 +44,7 @@ def create_app(answerer: Answerer | None = None) -> FastAPI:
     @app.post("/ask")
     def ask(body: AskRequest, request: Request) -> AskResponse:
         answerer: Answerer = request.app.state.answerer
-        answer = answerer.ask(body.question)
+        answer = answerer.ask(body.question, k=body.top_k)
         return AskResponse(
             answer=answer.text,
             sources=[
@@ -54,6 +54,7 @@ def create_app(answerer: Answerer | None = None) -> FastAPI:
                     url=hit.url,
                     stars=hit.stars,
                     heading=hit.heading,
+                    snippet=snippet(hit.body),
                     score=round(hit.score, 4),
                 )
                 for n, hit in enumerate(answer.sources, 1)
@@ -98,6 +99,18 @@ def create_app(answerer: Answerer | None = None) -> FastAPI:
         return JSONResponse({"detail": "The LLM request failed."}, status_code=502)
 
     return app
+
+
+def snippet(body: str, max_chars: int = 200) -> str:
+    """One line of at most max_chars, cut at a word boundary."""
+    text = " ".join(body.split())
+    if len(text) <= max_chars:
+        return text
+    cut = text[: max_chars - 1]  # leaves room for the ellipsis
+    # Drop the last word only if the cut went through its middle
+    if text[max_chars - 1] != " " and " " in cut:
+        cut = cut.rsplit(" ", 1)[0]
+    return cut.rstrip() + "…"
 
 
 def index_age_days(built_at: str | None, now: datetime) -> float | None:
