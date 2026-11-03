@@ -10,10 +10,13 @@ authors = [
 # releases for 3.13+ have no Intel macOS builds, so the lock can't cover them
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "fastapi>=0.162.0",
     "fastembed>=0.9.1",
+    "google-genai>=2.34.0",
     "numpy>=2.5.4",
     "python-dotenv>=1.2.4",
     "tokenizers>=0.23.3",
+    "uvicorn>=0.54.0",
 ]
 
 [build-system]
@@ -45,6 +48,7 @@ select = ["E", "F", "I", "B", "UP"]
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.16.0",
     "pytest>=9.2.0",
     "ruff>=0.17.3",
 ]
