@@ -57,3 +57,7 @@ LLM_TIMEOUT_SECONDS = float(os.environ.get("LLM_TIMEOUT_SECONDS", 30))
 # suggests, unless that delay is longer than a caller should wait; the daily limit never is.
 LLM_MAX_RETRIES = int(os.environ.get("LLM_MAX_RETRIES", 2))
 LLM_MAX_RETRY_WAIT_SECONDS = float(os.environ.get("LLM_MAX_RETRY_WAIT_SECONDS", 20))
+
+# API: /health flags the index as stale when the last build is older than this
+INDEX_STALE_DAYS = int(os.environ.get("INDEX_STALE_DAYS", 14))
+QUESTION_MAX_CHARS = int(os.environ.get("QUESTION_MAX_CHARS", 500))
