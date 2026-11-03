@@ -16,7 +16,7 @@ from rag.retrieval.search import Hit
 
 
 def hit(name: str, heading: str = "Install", text: str = "Some README text.") -> Hit:
-    return Hit(name, f"https://github.com/{name}", 1234, "A repo", heading, text, 0.8)
+    return Hit(name, f"https://github.com/{name}", 1234, "A repo", heading, text, text, 0.8)
 
 
 # --- prompt ---
@@ -132,8 +132,9 @@ class StubRetriever:
     def __init__(self, hits: list[Hit]) -> None:
         self.hits = hits
 
-    def retrieve(self, question: str) -> list[Hit]:
-        return self.hits
+    def retrieve(self, question: str, k: int) -> list[Hit]:
+        self.k = k
+        return self.hits[:k]
 
 
 def test_answer_sends_the_retrieved_excerpts_and_returns_them_as_sources():
@@ -147,6 +148,15 @@ def test_answer_sends_the_retrieved_excerpts_and_returns_them_as_sources():
     system, prompt = llm.calls[0]
     assert system == SYSTEM_PROMPT
     assert "[2] nomic-ai/gpt4all" in prompt
+
+
+def test_answer_passes_k_to_retrieval():
+    retriever = StubRetriever([hit("a/one"), hit("b/two"), hit("c/three")])
+
+    answer = Answerer(retriever, FakeLLM()).ask("which one?", k=2)
+
+    assert retriever.k == 2
+    assert len(answer.sources) == 2
 
 
 def test_no_retrieved_chunks_means_no_llm_call():

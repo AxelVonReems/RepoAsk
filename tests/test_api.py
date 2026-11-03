@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from rag.api.main import create_app, index_age_days
+from rag.api.main import create_app, index_age_days, snippet
 from rag.llm.answer import Answerer
 from rag.llm.client import FakeLLM, LLMError, QuotaExhaustedError, RateLimitedError
 from rag.retrieval.search import Index, Retriever
@@ -29,12 +29,15 @@ class FailingLLM(FakeLLM):
         raise self.error
 
 
+BODY = "Install it:\n\n    pip install one\n\nThen run it."
+
+
 def make_answerer(llm: FakeLLM, built_at: datetime | None = None) -> Answerer:
     """Two repos in a 2-dim index; the stub query vector matches a/one best."""
     built_at = built_at or datetime.now(UTC)
     chunks = [
-        ("1", "a/one", "https://github.com/a/one", 100, "One", "Install", "a/one\n\nUse one."),
-        ("2", "b/two", "https://github.com/b/two", 50, "Two", "", "b/two\n\nUse two."),
+        ("1", "a/one", "https://github.com/a/one", 100, "One", "Install", BODY, "a/one\n\n" + BODY),
+        ("2", "b/two", "https://github.com/b/two", 50, "Two", "", "Use two.", "b/two\n\nUse two."),
     ]
     meta = {"built_at": built_at.isoformat(), "settings": json.dumps({"model": "fake"})}
     index = Index(np.eye(2, dtype=np.float32), chunks, meta)
@@ -61,6 +64,25 @@ def test_ask_returns_answer_and_numbered_sources(client: TestClient):
     assert body["model"] == "fake-llm"
     assert [(s["n"], s["full_name"]) for s in body["sources"]] == [(1, "a/one"), (2, "b/two")]
     assert body["sources"][0]["score"] == pytest.approx(1.0)
+
+
+def test_sources_carry_a_one_line_snippet(client: TestClient):
+    sources = client.post("/ask", json={"question": "which repo should I use?"}).json()["sources"]
+
+    assert sources[0]["snippet"] == "Install it: pip install one Then run it."
+
+
+def test_top_k_limits_the_sources(client: TestClient):
+    response = client.post("/ask", json={"question": "which repo should I use?", "top_k": 1})
+
+    assert [s["full_name"] for s in response.json()["sources"]] == ["a/one"]
+
+
+@pytest.mark.parametrize("top_k", [0, 11])
+def test_top_k_outside_1_to_10_is_rejected(client: TestClient, top_k: int):
+    response = client.post("/ask", json={"question": "which repo?", "top_k": top_k})
+
+    assert response.status_code == 422
 
 
 @pytest.mark.parametrize("question", ["", "hi", "x" * 501])
@@ -113,3 +135,14 @@ def test_index_age_days():
 
     assert index_age_days("2026-11-01T12:00:00+00:00", now) == 2.0
     assert index_age_days(None, now) is None
+
+
+def test_snippet_cuts_long_text_at_a_word_boundary():
+    text = "word " * 100
+
+    cut = snippet(text, max_chars=20)
+
+    assert cut == "word word word word…"
+    assert len(cut) <= 20
+    assert snippet("short   text\n") == "short text"
+    assert snippet("word " * 100, max_chars=22) == "word word word word…"  # cut mid-word
