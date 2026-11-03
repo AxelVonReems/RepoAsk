@@ -1,0 +1,64 @@
+# Runs on every pull request and on pushes to dev/main. Needs no secrets and makes no calls to
+# GitHub's API or Gemini: tests use fixtures, fakes and tiny generated indexes. The only
+# download is the embedding model for test_embed.py, cached between runs.
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+# A new push to the same branch or PR cancels the run it makes outdated
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ingest:
+    name: Ingest (Node)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ingest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ingest/package-lock.json
+
+      # Installs exactly what package-lock.json says, and fails if it is out of date
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm audit --audit-level=high
+
+  rag:
+    name: RAG (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # setup-uv publishes no moving major tag, so it is pinned to a release
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: true
+
+      # --locked fails if uv.lock does not match pyproject.toml, instead of silently updating it
+      - run: uv sync --locked
+      - run: uv run ruff check
+      - run: uv run ruff format --check
+
+      - name: Cache embedding model
+        uses: actions/cache@v6
+        with:
+          path: .cache/fastembed
+          key: fastembed-BAAI-bge-small-en-v1.5
+
+      - run: uv run pytest
