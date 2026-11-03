@@ -47,3 +47,13 @@ SEARCH_TOP_K = int(os.environ.get("SEARCH_TOP_K", 5))
 SEARCH_MAX_PER_REPO = int(os.environ.get("SEARCH_MAX_PER_REPO", 2))
 # Chunks scoring below this are dropped; 0 keeps everything until the eval picks a value
 SEARCH_MIN_SCORE = float(os.environ.get("SEARCH_MIN_SCORE", 0.0))
+
+# LLM (Gemini). The key is a secret: .env locally, a secret store in deployment.
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+LLM_MAX_OUTPUT_TOKENS = int(os.environ.get("LLM_MAX_OUTPUT_TOKENS", 2048))
+LLM_TIMEOUT_SECONDS = float(os.environ.get("LLM_TIMEOUT_SECONDS", 30))
+# Free tier: 15 requests/min, 500/day. Per-minute limits are retried after the delay Gemini
+# suggests, unless that delay is longer than a caller should wait; the daily limit never is.
+LLM_MAX_RETRIES = int(os.environ.get("LLM_MAX_RETRIES", 2))
+LLM_MAX_RETRY_WAIT_SECONDS = float(os.environ.get("LLM_MAX_RETRY_WAIT_SECONDS", 20))
