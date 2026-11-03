@@ -40,7 +40,9 @@ def make_answerer(llm: FakeLLM, built_at: datetime | None = None) -> Answerer:
         ("2", "b/two", "https://github.com/b/two", 50, "Two", "", "Use two.", "b/two\n\nUse two."),
     ]
     meta = {"built_at": built_at.isoformat(), "settings": json.dumps({"model": "fake"})}
-    index = Index(np.eye(2, dtype=np.float32), chunks, meta)
+    # Both repos score above the default threshold: 1.0 and 0.8
+    vectors = np.array([[1, 0], [0.8, 0.6]], dtype=np.float32)
+    index = Index(vectors, chunks, meta)
     return Answerer(Retriever(index, StubEmbedder()), llm)
 
 

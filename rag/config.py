@@ -45,8 +45,9 @@ CHUNK_PREFIX_MAX_TOKENS = int(os.environ.get("CHUNK_PREFIX_MAX_TOKENS", 150))
 # (without a cap, a few huge awesome lists fill every slot)
 SEARCH_TOP_K = int(os.environ.get("SEARCH_TOP_K", 5))
 SEARCH_MAX_PER_REPO = int(os.environ.get("SEARCH_MAX_PER_REPO", 2))
-# Chunks scoring below this are dropped; 0 keeps everything until the eval picks a value
-SEARCH_MIN_SCORE = float(os.environ.get("SEARCH_MIN_SCORE", 0.0))
+# Chunks scoring below this are dropped. Measured on 25 extra questions: off-topic ones peak at
+# 0.65, real ones start at 0.71. With nothing left, /ask declines without calling the LLM.
+SEARCH_MIN_SCORE = float(os.environ.get("SEARCH_MIN_SCORE", 0.68))
 
 # LLM (Gemini). The key is a secret: .env locally, a secret store in deployment.
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")

@@ -2,6 +2,8 @@
 
 The CI counterpart of eval/run_eval.py: the real index is not available in CI, so this checks
 that clean -> chunk -> embed -> search ranks the obvious repository first for plain questions.
+Five tiny READMEs score lower than the real corpus, so these tests turn the score threshold
+off: it is calibrated on the real index (see eval/TUNING.md).
 """
 
 import hashlib
@@ -84,8 +86,8 @@ def retriever(tmp_path_factory: pytest.TempPathFactory) -> Retriever:
 def test_known_question_ranks_the_right_repo_first(
     retriever: Retriever, question: str, expected: str
 ):
-    assert retriever.retrieve(question)[0].full_name == expected
+    assert retriever.retrieve(question, min_score=-1.0)[0].full_name == expected
 
 
 def test_top_k_is_respected(retriever: Retriever):
-    assert len(retriever.retrieve("command line tool", k=2)) == 2
+    assert len(retriever.retrieve("command line tool", k=2, min_score=-1.0)) == 2
