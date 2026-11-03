@@ -1,0 +1,50 @@
+[project]
+name = "rag"
+version = "0.1.0"
+description = "RepoAsk RAG: indexes GitHub READMEs and answers questions with cited sources"
+readme = "README.md"
+authors = [
+    { name = "axelvonreems", email = "axelvonreems@gmail.com" }
+]
+# Only 3.12 is used (.python-version, python:3.12-slim image); newer onnxruntime
+# releases for 3.13+ have no Intel macOS builds, so the lock can't cover them
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastembed>=0.9.1",
+    "numpy>=2.5.4",
+    "python-dotenv>=1.2.4",
+    "tokenizers>=0.23.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14.0"]
+build-backend = "uv_build"
+
+# uv.lock is universal; only accept versions that have builds for every place we run:
+# Intel macOS (local dev) and x86_64 Linux (CI and the Docker image)
+[tool.uv]
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
+
+# Package lives in rag/ at the repo root, not src/rag/ (ingest/ already has its own src/)
+[tool.uv.build-backend]
+module-root = ""
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F: pycodestyle + pyflakes, I: import order, B: likely bugs, UP: modern syntax
+select = ["E", "F", "I", "B", "UP"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]

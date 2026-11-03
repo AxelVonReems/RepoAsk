@@ -10,6 +10,8 @@ export const GitHubRepoSchema = z.object({
   stargazers_count: z.number(),
   forks_count: z.number(),
   open_issues_count: z.number(),
+  // Maintainer-chosen keywords; absent on some payloads, so default to none
+  topics: z.array(z.string()).default([]),
 });
 
 // /orgs/{org}/repos returns a plain array

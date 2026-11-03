@@ -20,6 +20,7 @@ describe('README Store: Upsert and Idempotency', () => {
       metric: 1,
       forks: 0,
       openIssues: 0,
+      topics: [],
       syncedAt: new Date().toISOString()
     }]);
   });

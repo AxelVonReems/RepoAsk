@@ -16,6 +16,20 @@ describe('Sync Page: payload validation', () => {
     assert.strictEqual(repos[0]?.full_name, 'facebook/react');
   });
 
+  test('topics are parsed, and default to [] when the field is absent', () => {
+    const repos = parsePage('search', searchPage);
+
+    assert.deepStrictEqual(repos?.[0]?.topics, ['javascript', 'react', 'ui', 'frontend']);
+    assert.deepStrictEqual(repos?.[1]?.topics, [], 'Fixture item without topics must still validate');
+  });
+
+  test('topics with a non-string entry fail validation', () => {
+    const broken = structuredClone(searchPage);
+    broken.items[0].topics = ['ok', 42];
+
+    assert.strictEqual(parsePage('search', broken), null);
+  });
+
   test('search payload missing the envelope fails', () => {
     // A plain array is the org shape, not the search shape
     assert.strictEqual(parsePage('search', searchPage.items), null);

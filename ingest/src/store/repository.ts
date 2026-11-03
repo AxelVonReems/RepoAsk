@@ -6,11 +6,12 @@ export function upsertRepositories(repos: RepositoryRecord[]): { inserted: numbe
   // as SQLite's info.changes returns 1 for both on an upsert.
   const checkStmt = db.prepare<{ id: string }>('SELECT 1 FROM repositories WHERE id = @id');
 
-  const upsertStmt = db.prepare<RepositoryRecord>(`
+  // SQLite has no array type, so topics are bound as a JSON string
+  const upsertStmt = db.prepare<Omit<RepositoryRecord, 'topics'> & { topics: string }>(`
     INSERT INTO repositories (
-      id, name, fullName, url, description, metric, forks, openIssues, syncedAt
+      id, name, fullName, url, description, metric, forks, openIssues, topics, syncedAt
     ) VALUES (
-      @id, @name, @fullName, @url, @description, @metric, @forks, @openIssues, @syncedAt
+      @id, @name, @fullName, @url, @description, @metric, @forks, @openIssues, @topics, @syncedAt
     )
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
@@ -20,6 +21,7 @@ export function upsertRepositories(repos: RepositoryRecord[]): { inserted: numbe
       metric = excluded.metric,
       forks = excluded.forks,
       openIssues = excluded.openIssues,
+      topics = excluded.topics,
       syncedAt = excluded.syncedAt
   `);
 
@@ -30,7 +32,7 @@ export function upsertRepositories(repos: RepositoryRecord[]): { inserted: numbe
     for (const repo of repositories) {
       const exists = checkStmt.get({ id: repo.id }) !== undefined;
 
-      upsertStmt.run(repo);
+      upsertStmt.run({ ...repo, topics: JSON.stringify(repo.topics) });
 
       if (exists) {
         updated++;

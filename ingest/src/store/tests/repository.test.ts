@@ -1,6 +1,7 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { initDB, db } from '../db.js';
+import Database from 'better-sqlite3';
+import { addColumnIfMissing, initDB, db } from '../db.js';
 import { deleteRepositoriesSyncedBefore, upsertRepositories } from '../repository.js';
 import { toReadmeRecord, upsertReadme } from '../readmes.js';
 import type { RepositoryRecord } from '../types.js';
@@ -26,9 +27,10 @@ describe('Repository Store: Upsert and Idempotency', () => {
       fullName: 'microsoft/demo-repo',
       url: 'https://github.com/microsoft/demo-repo',
       description: 'A repository used for upsert demonstration',
-      metric: 150, 
+      metric: 150,
       forks: 10,
       openIssues: 0,
+      topics: ['demo', 'upsert'],
       syncedAt: new Date().toISOString()
     };
 
@@ -39,6 +41,7 @@ describe('Repository Store: Upsert and Idempotency', () => {
 
     // Mutate the entity (simulating a GitHub API update)
     mockRepo.metric = 500;
+    mockRepo.topics = ['demo', 'upsert', 'llm'];
     mockRepo.syncedAt = new Date().toISOString();
 
     // Second Execution
@@ -47,8 +50,30 @@ describe('Repository Store: Upsert and Idempotency', () => {
     assert.strictEqual(secondSync.updated, 1, 'Second run should update exactly 1 row');
 
     // Final Database Assertion
-    const finalRecord = db.prepare('SELECT metric FROM repositories WHERE id = ?').get(MOCK_ID) as { metric: number };
+    const finalRecord = db.prepare('SELECT metric, topics FROM repositories WHERE id = ?').get(MOCK_ID) as { metric: number; topics: string };
     assert.strictEqual(finalRecord.metric, 500, 'Database should reflect the updated metric');
+    assert.deepStrictEqual(JSON.parse(finalRecord.topics), ['demo', 'upsert', 'llm'], 'Topics should be stored as a JSON array and updated');
+  });
+});
+
+describe('Repository Store: Schema Migration', () => {
+  test('should add the topics column to a database created before it existed', () => {
+    const legacy = new Database(':memory:');
+    legacy.exec(`
+      CREATE TABLE repositories (
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, fullName TEXT NOT NULL, url TEXT NOT NULL,
+        description TEXT, metric INTEGER NOT NULL, forks INTEGER NOT NULL,
+        openIssues INTEGER NOT NULL, syncedAt TEXT NOT NULL
+      )
+    `);
+    legacy.prepare(`INSERT INTO repositories VALUES ('1', 'old', 'o/old', 'u', NULL, 1, 0, 0, 't')`).run();
+
+    addColumnIfMissing('repositories', 'topics', "TEXT NOT NULL DEFAULT '[]'", legacy);
+    addColumnIfMissing('repositories', 'topics', "TEXT NOT NULL DEFAULT '[]'", legacy); // idempotent
+
+    const row = legacy.prepare('SELECT topics FROM repositories WHERE id = ?').get('1') as { topics: string };
+    assert.strictEqual(row.topics, '[]', 'Existing rows get the default');
+    legacy.close();
   });
 });
 describe('Repository Store: Stale Cleanup', () => {
@@ -65,6 +90,7 @@ describe('Repository Store: Stale Cleanup', () => {
     metric: 1,
     forks: 0,
     openIssues: 0,
+    topics: [],
     syncedAt
   });
 

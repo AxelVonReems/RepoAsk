@@ -105,6 +105,7 @@ export async function sync(): Promise<SyncSummary> {
             metric: payload.stargazers_count ?? 0,
             forks: payload.forks_count ?? 0,
             openIssues: payload.open_issues_count ?? 0,
+            topics: payload.topics,
             syncedAt: new Date().toISOString()
           });
         } catch (error: unknown) {

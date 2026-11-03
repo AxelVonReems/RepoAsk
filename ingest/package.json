@@ -1,9 +1,9 @@
 {
-  "name": "ai-automation-worker",
+  "name": "repoask-ingest",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
-  "description": "AI Automation Worker",
-  "main": "index.js",
+  "description": "RepoAsk ingest worker: syncs top GitHub repositories and their READMEs into SQLite",
   "scripts": {
     "start": "tsx src/index.ts",
     "sync": "tsx src/sync/index.ts",
@@ -15,15 +15,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AxelVonReems/ai-automation-worker.git"
+    "url": "git+https://github.com/AxelVonReems/RepoAsk.git",
+    "directory": "ingest"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/AxelVonReems/ai-automation-worker/issues"
+    "url": "https://github.com/AxelVonReems/RepoAsk/issues"
   },
-  "homepage": "https://github.com/AxelVonReems/ai-automation-worker#readme",
+  "homepage": "https://github.com/AxelVonReems/RepoAsk#readme",
   "dependencies": {
     "axios": "^1.20.0",
     "better-sqlite3": "^13.0.3",
