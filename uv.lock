@@ -489,7 +489,9 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastembed" },
+    { name = "numpy" },
     { name = "python-dotenv" },
+    { name = "tokenizers" },
 ]
 
 [package.dev-dependencies]
@@ -501,7 +503,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastembed", specifier = ">=0.9.1" },
+    { name = "numpy", specifier = ">=2.5.4" },
     { name = "python-dotenv", specifier = ">=1.2.4" },
+    { name = "tokenizers", specifier = ">=0.23.3" },
 ]
 
 [package.metadata.requires-dev]

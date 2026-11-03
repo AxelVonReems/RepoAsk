@@ -11,7 +11,9 @@ authors = [
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastembed>=0.9.1",
+    "numpy>=2.5.4",
     "python-dotenv>=1.2.4",
+    "tokenizers>=0.23.3",
 ]
 
 [build-system]
