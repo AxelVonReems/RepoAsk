@@ -86,7 +86,7 @@ def test_load_reads_vectors_and_meta(index_db: Path):
 
 
 def test_results_are_ranked_by_cosine_similarity(index_db: Path):
-    hits = Index.load(index_db).search(QUERY, k=5, max_per_repo=5)
+    hits = Index.load(index_db).search(QUERY, k=5, max_per_repo=5, min_score=-1.0)
 
     assert [h.text.split()[-1] for h in hits] == ["0", "1", "2", "3", "4"]
     assert hits[0].score == pytest.approx(float(CHUNKS[0][1] @ QUERY))

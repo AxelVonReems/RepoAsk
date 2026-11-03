@@ -76,13 +76,15 @@ def evaluate(
         question, expected = item["question"], item["expected"]
         vector = retriever.embedder.embed_query(question)
         hits = retriever.index.search(vector)  # same settings as /ask
-        deep = [h.full_name for h in retriever.index.search(vector, k=DEEP_K, max_per_repo=1)]
+        # No score threshold here: the rank of a repo matters even when it scores too low to be used
+        deep_hits = retriever.index.search(vector, k=DEEP_K, max_per_repo=1, min_score=-1.0)
+        deep = [h.full_name for h in deep_hits]
         ranks = [deep.index(repo) + 1 for repo in expected if repo in deep]
         result = Result(
             question,
             expected,
             sources=list(dict.fromkeys(h.full_name for h in hits)),
-            top_score=hits[0].score if hits else 0.0,
+            top_score=deep_hits[0].score,  # also when the threshold left no sources
             rank=min(ranks) if ranks else None,
         )
         if answerer:
