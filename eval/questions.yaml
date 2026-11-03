@@ -1,0 +1,31 @@
+# Eval set: questions a user might ask, with the repositories a good answer must include.
+# A question counts as a retrieval hit when any expected repo is among the retrieved sources.
+# Phrasing deliberately avoids copying the repos' own descriptions word for word.
+# expected: [] marks an out-of-scope question: the answer should say the READMEs don't cover it.
+
+questions:
+  # Easy: one obvious repository
+  - question: Which repo is a typed superset of JavaScript?
+    expected: [microsoft/TypeScript]
+  - question: What can I use to download videos from YouTube on the command line?
+    expected: [yt-dlp/yt-dlp]
+  - question: Is there an interactive fuzzy finder for the terminal?
+    expected: [junegunn/fzf]
+  - question: What is a faster alternative to grep that skips files listed in .gitignore?
+    expected: [BurntSushi/ripgrep]
+  - question: Which CSS framework lets me style pages with utility classes in the HTML?
+    expected: [tailwindlabs/tailwindcss]
+  - question: Which open-source platform can control my smart home devices locally?
+    expected: [home-assistant/core]
+  - question: I need a whiteboard app for drawing sketchy-looking diagrams. Any suggestions?
+    expected: [excalidraw/excalidraw]
+
+  # Comparative: several valid repositories
+  - question: Which repos help me run large language models locally on my own computer?
+    expected: [ollama/ollama, ggml-org/llama.cpp]
+  - question: Which fast, GPU-accelerated terminal emulators are there?
+    expected: [alacritty/alacritty, ghostty-org/ghostty]
+
+  # Out of scope: nothing in the index answers this
+  - question: How do I bake sourdough bread at home?
+    expected: []
