@@ -1,0 +1,96 @@
+# Builds the API image with the latest index.db, pushes it to ghcr.io and points the Azure
+# Container App at it. Runs on every push to main (after CI passes), after each weekly refresh
+# (called from refresh.yml), and by hand.
+#
+# Azure sign-in uses OIDC: GitHub issues a short-lived token for this run and Azure trusts it
+# only for repo AxelVonReems/RepoAsk on main. No Azure password or key is stored anywhere.
+# AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID are repository variables: IDs, not secrets.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+# One deploy at a time; a newer one waits instead of cancelling a deploy halfway
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  RESOURCE_GROUP: RepoAsk
+  CONTAINER_APP: repoask
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Build, push and deploy
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # No `environment:` here: it would change the OIDC subject to ...:environment:<name>, and
+    # Azure trusts only ...:ref:refs/heads/main
+    permissions:
+      contents: read
+      packages: write # push to ghcr.io
+      id-token: write # request the OIDC token for Azure
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download index.db
+        run: gh release download index-latest --pattern index.db --dir data
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # Image names must be lowercase; the repository is AxelVonReems/RepoAsk. The tag is the
+      # commit plus the run number: a refresh rebuilds the same commit with a new index.db.
+      - name: Image name
+        id: image
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA::7}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - uses: docker/setup-buildx-action@v4
+
+      # The layer cache in GitHub Actions keeps rebuilds fast: dependencies and the model are
+      # rebuilt only when uv.lock or rag/ change
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.image.outputs.ref }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Creates a new revision with the new image; secrets, env vars and scaling stay as they are.
+      # Rollback: run this command by hand with an earlier tag from the ghcr.io package page.
+      - name: Update the container app
+        run: |
+          az containerapp update --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
+            --image "${{ steps.image.outputs.ref }}" --output none
+
+      # The app scales to zero, so the first request also starts it: allow for a cold start
+      - name: Smoke test
+        run: |
+          fqdn=$(az containerapp show --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
+            --query properties.configuration.ingress.fqdn --output tsv)
+          curl --fail --silent --show-error --retry 10 --retry-delay 10 --retry-all-errors \
+            --max-time 60 "https://$fqdn/health"
+          echo "Deployed \`${{ steps.image.outputs.ref }}\` to https://$fqdn/docs" >> "$GITHUB_STEP_SUMMARY"

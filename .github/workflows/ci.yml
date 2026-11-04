@@ -4,9 +4,11 @@
 name: CI
 
 on:
+  # main is not listed: a push to main runs deploy.yml, which calls this workflow first
   push:
-    branches: [main, dev]
+    branches: [dev]
   pull_request:
+  workflow_call:
 
 # A new push to the same branch or PR cancels the run it makes outdated
 concurrency:
