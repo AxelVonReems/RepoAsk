@@ -132,6 +132,20 @@ def test_llm_failures_map_to_clear_statuses(error: Exception, status: int, retry
     assert "LLM" in response.json()["detail"]
 
 
+def test_root_serves_the_demo_page(client: TestClient):
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    # The page talks to these two endpoints; renaming either must break this test
+    assert 'fetch("/ask"' in response.text
+    assert 'fetch("/health"' in response.text
+
+
+def test_demo_page_is_not_in_the_api_docs(client: TestClient):
+    assert "/" not in client.get("/openapi.json").json()["paths"]
+
+
 def test_index_age_days():
     now = datetime(2026, 11, 3, 12, tzinfo=UTC)
 
