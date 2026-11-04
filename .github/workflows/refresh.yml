@@ -97,3 +97,13 @@ jobs:
 
       - name: Publish to the release
         run: gh release upload "$RELEASE_TAG" data/worker.db data/index.db --clobber
+
+  # A new index only reaches users in a new image. Called as a reusable workflow because a release
+  # uploaded with the built-in token does not trigger other workflows.
+  deploy:
+    needs: refresh
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
