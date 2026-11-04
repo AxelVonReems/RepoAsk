@@ -49,10 +49,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       # Image names must be lowercase; the repository is AxelVonReems/RepoAsk. The tag is the
-      # commit plus the run number: a refresh rebuilds the same commit with a new index.db.
+      # commit plus the run ID: a refresh rebuilds the same commit with a new index.db. Not the run
+      # number: each workflow counts its own, and when refresh.yml calls this one, the number is
+      # refresh's, so a refresh and a push deploy could produce the same tag. Run IDs never repeat.
       - name: Image name
         id: image
-        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA::7}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA::7}-${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/login-action@v4
         with:
