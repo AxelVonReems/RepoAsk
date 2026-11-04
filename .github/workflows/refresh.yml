@@ -1,0 +1,109 @@
+# Weekly re-index: sync the top repositories and their READMEs, update index.db, and publish
+# both databases as assets of the index-latest release (deploy.yml bakes index.db into the image).
+#
+# Both runs are incremental, which is what makes this fit in a free runner:
+# - worker.db keeps each README's ETag, so unchanged READMEs come back as 304, which doesn't
+#   count against the token's 1,000 requests/hour (a run from scratch would need ~1,010)
+# - index.db keeps a hash per repository, so only changed READMEs are embedded again
+#
+# Scheduled workflows run only from the default branch (main).
+name: Refresh index
+
+on:
+  schedule:
+    # Mondays 05:17 UTC; off the full hour, when GitHub's scheduler is busiest
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+# Never two refreshes at once, and never cancel one halfway through an upload
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  RELEASE_TAG: index-latest
+  # Fewer repositories than this means something went wrong upstream: keep the old index
+  MIN_REPOS: 900
+
+jobs:
+  refresh:
+    name: Sync and build index
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write # upload release assets
+    env:
+      GH_TOKEN: ${{ github.token }} # for the gh CLI
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download the previous databases
+        run: gh release download "$RELEASE_TAG" --pattern worker.db --pattern index.db --dir data
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ingest/package-lock.json
+
+      - run: npm ci
+        working-directory: ingest
+
+      # The built-in token: read access to public repos, 1,000 requests/hour
+      - name: Sync repositories and READMEs
+        run: npm run sync
+        working-directory: ingest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: true
+
+      # With dev dependencies: the eval step needs pyyaml
+      - run: uv sync --locked
+
+      - name: Cache embedding model
+        uses: actions/cache@v6
+        with:
+          path: .cache/fastembed
+          key: fastembed-BAAI-bge-small-en-v1.5
+
+      - name: Build index
+        run: uv run python -m rag.indexing.build_index
+
+      - name: Check the index
+        run: |
+          uv run python - <<'EOF'
+          import os
+          from rag import config
+          from rag.retrieval.search import Index
+
+          index = Index.load(config.INDEX_DB_PATH)
+          print(f"{index.repo_count} repos, {index.chunk_count} chunks")
+          if index.repo_count < int(os.environ["MIN_REPOS"]):
+              raise SystemExit(f"Only {index.repo_count} repos, expected {os.environ['MIN_REPOS']}+")
+          EOF
+
+      # Retrieval only (no LLM, no secrets): shows on the run page whether quality held
+      - name: Eval retrieval
+        run: |
+          uv run python eval/run_eval.py --out data/eval-results.md
+          cat data/eval-results.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to the release
+        run: gh release upload "$RELEASE_TAG" data/worker.db data/index.db --clobber
+
+  # A new index only reaches users in a new image. Called as a reusable workflow because a release
+  # uploaded with the built-in token does not trigger other workflows.
+  deploy:
+    needs: refresh
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
