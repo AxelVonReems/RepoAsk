@@ -195,7 +195,7 @@ def main() -> None:
     print()
     for metric, value in summary(results, llm is not None):
         print(f"{metric}: {value}")
-    print(f"\nWrote {args.out.relative_to(config.ROOT_DIR)}")
+    print(f"\nWrote {args.out}")
 
 
 if __name__ == "__main__":
