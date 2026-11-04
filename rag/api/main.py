@@ -2,17 +2,19 @@
 
     uv run uvicorn rag.api.main:app [--reload]
 
-Then open http://127.0.0.1:8000/docs to try it. The index and the embedding model load once at
-startup (a few seconds), so each request only pays for one query embedding and one LLM call.
+Then open http://127.0.0.1:8000 for the demo page, or /docs for the API. The index and the
+embedding model load once at startup (a few seconds), so each request only pays for one query
+embedding and one LLM call.
 """
 
 import math
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from rag import config
 from rag.api.models import AskRequest, AskResponse, HealthResponse, Source
@@ -20,6 +22,9 @@ from rag.indexing.embed import FastEmbedEmbedder
 from rag.llm.answer import Answerer
 from rag.llm.client import GeminiClient, LLMError, QuotaExhaustedError, RateLimitedError
 from rag.retrieval.search import Index, Retriever
+
+# One self-contained page (HTML, CSS and JS inline) that calls /ask and /health
+DEMO_PAGE = Path(__file__).parent / "static" / "index.html"
 
 
 def create_app(answerer: Answerer | None = None) -> FastAPI:
@@ -38,6 +43,11 @@ def create_app(answerer: Answerer | None = None) -> FastAPI:
         description="Ask questions about the READMEs of the most-starred GitHub repositories.",
         lifespan=lifespan,
     )
+
+    # Left out of /docs: it's the demo UI, not part of the API
+    @app.get("/", include_in_schema=False)
+    def demo_page() -> FileResponse:
+        return FileResponse(DEMO_PAGE)
 
     # A plain `def` (not `async def`): retrieval and the Gemini call block, so FastAPI runs
     # this in its thread pool instead of stalling every other request on the event loop
