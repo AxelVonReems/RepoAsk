@@ -1,0 +1,8 @@
+# Allow-list: the build context gets only what the Dockerfile copies. Everything else (.env,
+# .git, .venv, worker.db, ingest/, the local model cache) never reaches the Docker daemon.
+*
+!pyproject.toml
+!uv.lock
+!rag/
+!data/index.db
+**/__pycache__
