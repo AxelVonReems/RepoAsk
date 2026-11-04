@@ -1,0 +1,61 @@
+# Full eval with real Gemini answers against the published index. Manual only: each run spends
+# one Gemini request per question (10 of the free tier's 500 a day).
+#
+# Results go to the run summary and an artifact rather than a commit: the branch rules require
+# passing checks for every push, so a workflow can't push to dev or main directly. To keep a run,
+# download eval-results and commit it as eval/results.md through a normal PR.
+name: Eval
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: eval
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    name: Eval with Gemini
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # A missing secret would otherwise show up only as 10 failed answers in the results
+      - name: Check the Gemini key is set
+        run: test -n "$GEMINI_API_KEY" || { echo "::error::Add the GEMINI_API_KEY repository secret"; exit 1; }
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - uses: actions/checkout@v7
+
+      - name: Download index.db
+        run: gh release download index-latest --pattern index.db --dir data
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: true
+
+      - run: uv sync --locked
+
+      - name: Cache embedding model
+        uses: actions/cache@v6
+        with:
+          path: .cache/fastembed
+          key: fastembed-BAAI-bge-small-en-v1.5
+
+      - name: Run eval
+        run: |
+          uv run python eval/run_eval.py --llm
+          cat eval/results.md >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: eval-results
+          path: eval/results.md
