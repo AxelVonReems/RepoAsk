@@ -215,7 +215,7 @@
     show(`<div class="loading"><div class="spinner"></div><span id="loading-text">Searching the READMEs…</span></div>`);
     const hint = setTimeout(() => {
       const el = $("loading-text");
-      if (el) el.textContent = "Waking up the server (it sleeps when idle to stay free). This can take up to 30 seconds…";
+      if (el) el.textContent = "Still working on your answer. This can take up to 30 seconds…";
     }, COLD_START_HINT_MS);
 
     try {
